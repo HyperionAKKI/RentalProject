@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                String             @id @default(uuid())
+  name              String
+  email             String             @unique
+  password          String
+  role              String             @default("TENANT") // "ADMIN" or "TENANT"
+  roomNo            String?            // E.g., A-101
+  payments          Payment[]
+  maintenanceTasks  MaintenanceTask[]
+  documents         Document[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  number    String   @unique // E.g., A-101
+  status    String   @default("AVAILABLE") // "AVAILABLE" or "BOOKED"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  amount     Float
+  dueDate    String   // Format: YYYY-MM-DD
+  status     String   @default("PENDING") // "PENDING", "PAID", "OVERDUE"
+  tenantName String
+  roomNo     String
+  tenant     User?    @relation(fields: [tenantId], references: [id])
+  tenantId   String?  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MaintenanceTask {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("PENDING") // "PENDING", "IN PROGRESS", "COMPLETED"
+  reporter    User?    @relation(fields: [reporterId], references: [id])
+  reporterId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Document {
+  id         String   @id @default(uuid())
+  tenantName String
+  roomNo     String
+  contact    String
+  idProof    String   // URL or String reference
+  agreement  String   // URL or String reference
+  tenant     User?    @relation(fields: [tenantId], references: [id])
+  tenantId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
