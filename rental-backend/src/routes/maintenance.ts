@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '../prisma';
+import { MaintenanceTask } from '../models/MaintenanceTask';
 import { authenticateJWT, requireAdmin } from '../middleware/auth';
 
 const router = Router();
@@ -8,12 +8,10 @@ const router = Router();
 router.get('/', authenticateJWT, async (req: any, res: Response) => {
   try {
     if (req.user.role === 'ADMIN') {
-      const tasks = await prisma.maintenanceTask.findMany();
+      const tasks = await MaintenanceTask.find();
       res.json(tasks);
     } else {
-      const tasks = await prisma.maintenanceTask.findMany({
-        where: { reporterId: req.user.id }
-      });
+      const tasks = await MaintenanceTask.find({ reporterId: req.user.id });
       res.json(tasks);
     }
   } catch (error) {
@@ -25,13 +23,11 @@ router.get('/', authenticateJWT, async (req: any, res: Response) => {
 router.post('/', authenticateJWT, async (req: any, res: Response) => {
   try {
     const { title, description } = req.body;
-    const task = await prisma.maintenanceTask.create({
-      data: {
-        title,
-        description,
-        status: 'PENDING',
-        reporterId: req.user.id
-      }
+    const task = await MaintenanceTask.create({
+      title,
+      description,
+      status: 'PENDING',
+      reporterId: req.user.id
     });
     res.status(201).json(task);
   } catch (error) {
@@ -40,14 +36,15 @@ router.post('/', authenticateJWT, async (req: any, res: Response) => {
 });
 
 // Admin: Update status
-router.put('/:id/status', authenticateJWT, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id/status', authenticateJWT, requireAdmin, async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const task = await prisma.maintenanceTask.update({
-      where: { id },
-      data: { status }
-    });
+    const task = await MaintenanceTask.findByIdAndUpdate(id, { status }, { new: true });
+    
+    if (!task) {
+      return res.status(404).json({ error: 'Maintenance task not found' });
+    }
     res.json(task);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update maintenance task' });

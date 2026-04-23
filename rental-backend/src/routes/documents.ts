@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '../prisma';
+import { DocumentModel } from '../models/Document';
 import { authenticateJWT, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
 router.get('/', authenticateJWT, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const documents = await prisma.document.findMany();
+    const documents = await DocumentModel.find();
     res.json(documents);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch documents' });
@@ -16,8 +16,8 @@ router.get('/', authenticateJWT, requireAdmin, async (req: Request, res: Respons
 router.post('/', authenticateJWT, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { tenantName, roomNo, contact, idProof, agreement, tenantId } = req.body;
-    const document = await prisma.document.create({
-      data: { tenantName, roomNo, contact, idProof, agreement, tenantId }
+    const document = await DocumentModel.create({
+      tenantName, roomNo, contact, idProof, agreement, tenantId
     });
     res.status(201).json(document);
   } catch (error) {

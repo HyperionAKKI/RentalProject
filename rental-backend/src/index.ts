@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swagger';
+import { connectDB } from './models';
 import authRoutes from './routes/auth';
 import roomRoutes from './routes/rooms';
 import paymentRoutes from './routes/payments';
@@ -9,9 +12,14 @@ import documentRoutes from './routes/documents';
 
 dotenv.config();
 
+// Connect to MongoDB
+connectDB();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/', (req, res) => {
   res.send('Rental API works!');
