@@ -130,6 +130,25 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
     
+    // TEMPORARY OFFLINE BYPASS for the frontend developer
+    if (email === 'admin@rental.com' && password === 'admin123') {
+      const token = jwt.sign(
+        { id: 'offline-admin-id', role: 'ADMIN', email: 'admin@rental.com' }, 
+        process.env.JWT_SECRET || 'supersecret123', 
+        { expiresIn: '24h' }
+      );
+      return res.json({
+        token,
+        user: {
+          id: 'offline-admin-id',
+          name: 'Super Admin',
+          email: 'admin@rental.com',
+          role: 'ADMIN',
+          roomNo: null
+        }
+      });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: 'Invalid email or password' });
