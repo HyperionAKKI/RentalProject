@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticateJWT, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -286,5 +286,133 @@ router.get('/profile', authenticateJWT, async (req: any, res: Response): Promise
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+/**
+ * @swagger
+ * /api/auth/admin/register-tenant:
+ *   post:
+ *     summary: "[ADMIN ONLY] Register a new tenant"
+ *     description: Requires a valid Admin JWT. The owner/admin can register new tenants and optionally assign a room and role.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Jane Doe
+ *               email:
+ *                 type: string
+ *                 example: jane@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: tenant123
+ *               roomNo:
+ *                 type: string
+ *                 example: "202"
+ *               role:
+ *                 type: string
+ *                 enum: [TENANT, ADMIN]
+ *                 default: TENANT
+ *                 example: TENANT
+ *     responses:
+ *       201:
+ *         description: Tenant registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     roomNo:
+ *                       type: string
+ *       400:
+ *         description: Validation error or email already registered
+ *       401:
+ *         description: No token provided
+ *       403:
+ *         description: Access denied — Admins only
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/admin/register-tenant',
+  authenticateJWT,
+  requireAdmin,
+  async (req: any, res: Response): Promise<any> => {
+    try {
+      const { name, email, password, roomNo, role } = req.body;
+
+      // --- Input validation ---
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      if (!email || !email.trim()) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      const allowedRoles = ['TENANT', 'ADMIN'];
+      const assignedRole = role && allowedRoles.includes(role.toUpperCase()) ? role.toUpperCase() : 'TENANT';
+
+      // --- Duplicate check ---
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        return res.status(400).json({ error: 'A user with this email already exists' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = await User.create({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: assignedRole,
+        roomNo: roomNo?.trim() || null,
+      });
+
+      res.status(201).json({
+        message: `Tenant registered successfully by admin (${req.user.email})`,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          roomNo: newUser.roomNo,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Server error during tenant registration' });
+    }
+  }
+);
 
 export default router;
