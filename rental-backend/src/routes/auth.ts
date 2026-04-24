@@ -77,6 +77,102 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
 
 /**
  * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: Sign up a new tenant account
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               email:
+ *                 type: string
+ *                 example: john@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: secret123
+ *               roomNo:
+ *                 type: string
+ *                 example: "101"
+ *     responses:
+ *       201:
+ *         description: Account created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *       400:
+ *         description: Validation error or email already registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Server error
+ */
+router.post('/signup', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { name, email, password, roomNo } = req.body;
+
+    // --- Input validation ---
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // --- Check for existing account ---
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      role: 'TENANT',
+      roomNo: roomNo?.trim() || null,
+    });
+
+    res.status(201).json({ message: 'Account created successfully', userId: user.id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error during sign up' });
+  }
+});
+
+/**
+ * @swagger
  * /api/auth/login:
  *   post:
  *     summary: Log in a user
