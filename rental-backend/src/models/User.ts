@@ -6,6 +6,11 @@ export interface IUser extends Document {
   password?: string;
   role: string;
   roomNo?: string;
+  contact?: string;
+  moveInDate?: string;
+  idProof?: string;
+  idProofFile?: string;
+  rentalFile?: string;
 }
 
 const UserSchema: Schema = new Schema({
@@ -13,7 +18,12 @@ const UserSchema: Schema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'TENANT' },
-  roomNo: { type: String }
+  roomNo: { type: String },
+  contact: { type: String },
+  moveInDate: { type: String },
+  idProof: { type: String },
+  idProofFile: { type: String },
+  rentalFile: { type: String }
 }, {
   timestamps: true
 });

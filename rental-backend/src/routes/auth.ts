@@ -3,6 +3,26 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { authenticateJWT, requireAdmin } from '../middleware/auth';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+// Setup multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
 
 const router = Router();
 
@@ -292,14 +312,14 @@ router.get('/profile', authenticateJWT, async (req: any, res: Response): Promise
  * /api/auth/admin/register-tenant:
  *   post:
  *     summary: "[ADMIN ONLY] Register a new tenant"
- *     description: Requires a valid Admin JWT. The owner/admin can register new tenants and optionally assign a room and role.
+ *     description: Requires a valid Admin JWT. The owner/admin can register new tenants and optionally assign a room and role. Now supports multipart/form-data for file uploads.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -317,14 +337,32 @@ router.get('/profile', authenticateJWT, async (req: any, res: Response): Promise
  *                 type: string
  *                 minLength: 6
  *                 example: tenant123
+ *               contact:
+ *                 type: string
+ *                 example: "+1234567890"
  *               roomNo:
  *                 type: string
  *                 example: "202"
+ *               moveInDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2026-06-01"
+ *               idProof:
+ *                 type: string
+ *                 example: "Passport/SSN"
  *               role:
  *                 type: string
  *                 enum: [TENANT, ADMIN]
  *                 default: TENANT
  *                 example: TENANT
+ *               idProofFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: Identity Proof document
+ *               rentalFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: Rental Agreement document
  *     responses:
  *       201:
  *         description: Tenant registered successfully
@@ -361,9 +399,11 @@ router.post(
   '/admin/register-tenant',
   authenticateJWT,
   requireAdmin,
+  upload.fields([{ name: 'idProofFile', maxCount: 1 }, { name: 'rentalFile', maxCount: 1 }]),
   async (req: any, res: Response): Promise<any> => {
     try {
-      const { name, email, password, roomNo, role } = req.body;
+      const { name, email, password, roomNo, role, contact, moveInDate, idProof } = req.body;
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
       // --- Input validation ---
       if (!name || !name.trim()) {
@@ -390,12 +430,20 @@ router.post(
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      const idProofFilePath = files && files['idProofFile'] ? `/uploads/${files['idProofFile'][0].filename}` : null;
+      const rentalFilePath = files && files['rentalFile'] ? `/uploads/${files['rentalFile'][0].filename}` : null;
+
       const newUser = await User.create({
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password: hashedPassword,
         role: assignedRole,
         roomNo: roomNo?.trim() || null,
+        contact: contact?.trim() || null,
+        moveInDate: moveInDate?.trim() || null,
+        idProof: idProof?.trim() || null,
+        idProofFile: idProofFilePath,
+        rentalFile: rentalFilePath,
       });
 
       res.status(201).json({
@@ -406,6 +454,11 @@ router.post(
           email: newUser.email,
           role: newUser.role,
           roomNo: newUser.roomNo,
+          contact: newUser.contact,
+          moveInDate: newUser.moveInDate,
+          idProof: newUser.idProof,
+          idProofFile: newUser.idProofFile,
+          rentalFile: newUser.rentalFile,
         },
       });
     } catch (error) {
