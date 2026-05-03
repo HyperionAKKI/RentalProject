@@ -468,4 +468,52 @@ router.post(
   }
 );
 
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: Get all user data
+ *     description: Retrieve a list of all registered users.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *                   roomNo:
+ *                     type: string
+ *                   contact:
+ *                     type: string
+ *                   moveInDate:
+ *                     type: string
+ *       401:
+ *         description: No token provided
+ *       500:
+ *         description: Server error
+ */
+router.get('/users', authenticateJWT, async (req: Request, res: Response): Promise<any> => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error fetching users' });
+  }
+});
+
 export default router;
