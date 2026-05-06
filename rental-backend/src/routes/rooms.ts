@@ -4,6 +4,28 @@ import { authenticateJWT, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Rooms
+ *   description: Room management APIs
+ */
+
+/**
+ * @swagger
+ * /api/rooms:
+ *   get:
+ *     summary: Get all rooms
+ *     description: Admins and Tenants can get a list of all rooms.
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of rooms
+ *       500:
+ *         description: Server error
+ */
 // Get all rooms (Admin or Tenant)
 router.get('/', authenticateJWT, async (req: Request, res: Response) => {
   try {
@@ -14,6 +36,32 @@ router.get('/', authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/rooms:
+ *   post:
+ *     summary: Add a new room (Admin only)
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               number:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [AVAILABLE, OCCUPIED, MAINTENANCE]
+ *     responses:
+ *       201:
+ *         description: Room created successfully
+ *       500:
+ *         description: Server error
+ */
 // Admin: Add a new room
 router.post('/', authenticateJWT, requireAdmin, async (req: Request, res: Response) => {
   try {
@@ -25,6 +73,39 @@ router.post('/', authenticateJWT, requireAdmin, async (req: Request, res: Respon
   }
 });
 
+/**
+ * @swagger
+ * /api/rooms/{id}/status:
+ *   put:
+ *     summary: Update room status (Admin only)
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Room ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [AVAILABLE, OCCUPIED, MAINTENANCE]
+ *     responses:
+ *       200:
+ *         description: Room updated successfully
+ *       404:
+ *         description: Room not found
+ *       500:
+ *         description: Server error
+ */
 // Admin: Update room status
 router.put('/:id/status', authenticateJWT, requireAdmin, async (req: Request, res: Response) => {
   try {

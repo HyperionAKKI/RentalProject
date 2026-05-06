@@ -297,6 +297,38 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Get user profile
+ *     description: Retrieve the profile of the currently logged in user based on the JWT token.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                 roomNo:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
 router.get('/profile', authenticateJWT, async (req: any, res: Response): Promise<any> => {
   try {
     const user = await User.findById(req.user.id).select('name email role roomNo');

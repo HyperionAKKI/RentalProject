@@ -71,7 +71,7 @@ const router = Router();
 
 /**
  * @swagger
- * /payments:
+ * /api/payments:
  *   get:
  *     summary: Get payments
  *     description: Admin gets all payments, tenant gets only their own payments
@@ -106,7 +106,7 @@ router.get('/', authenticateJWT, async (req: any, res: Response) => {
 
 /**
  * @swagger
- * /payments:
+ * /api/payments:
  *   post:
  *     summary: Create payment (Admin only)
  *     tags: [Payments]
@@ -149,7 +149,7 @@ router.post('/', authenticateJWT, requireAdmin, async (req: Request, res: Respon
 
 /**
  * @swagger
- * /payments/{id}/pay:
+ * /api/payments/{id}/pay:
  *   put:
  *     summary: Mark payment as PAID
  *     tags: [Payments]
