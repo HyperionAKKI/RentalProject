@@ -33,122 +33,6 @@ const router = Router();
  *   description: User authentication and registration
  */
 
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Register a new user
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - password
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *               role:
- *                 type: string
- *                 default: TENANT
- *               roomNo:
- *                 type: string
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: User already exists
- *       500:
- *         description: Server error
- */
-router.post('/register', async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { name, email, password, role, roomNo } = req.body;
-    
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'TENANT',
-      roomNo
-    });
-
-    res.status(201).json({ message: 'User registered successfully', userId: user.id });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error during registration' });
-  }
-});
-
-/**
- * @swagger
- * /api/auth/signup:
- *   post:
- *     summary: Sign up a new tenant account
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - password
- *             properties:
- *               name:
- *                 type: string
- *                 example: John Doe
- *               email:
- *                 type: string
- *                 example: john@example.com
- *               password:
- *                 type: string
- *                 minLength: 6
- *                 example: secret123
- *               roomNo:
- *                 type: string
- *                 example: "101"
- *     responses:
- *       201:
- *         description: Account created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 userId:
- *                   type: string
- *       400:
- *         description: Validation error or email already registered
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *       500:
- *         description: Server error
- */
 router.post('/signup', async (req: Request, res: Response): Promise<any> => {
   try {
     const { name, email, password, roomNo } = req.body;
@@ -245,12 +129,12 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
 router.post('/login', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
-    
+
     // TEMPORARY OFFLINE BYPASS for the frontend developer
     if (email === 'admin@rental.com' && password === 'admin123') {
       const token = jwt.sign(
-        { id: 'offline-admin-id', role: 'ADMIN', email: 'admin@rental.com' }, 
-        process.env.JWT_SECRET || 'supersecret123', 
+        { id: 'offline-admin-id', role: 'ADMIN', email: 'admin@rental.com' },
+        process.env.JWT_SECRET || 'supersecret123',
         { expiresIn: '24h' }
       );
       return res.json({
@@ -276,8 +160,8 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     }
 
     const token = jwt.sign(
-      { id: user.id, role: user.role, email: user.email }, 
-      process.env.JWT_SECRET || 'supersecret123', 
+      { id: user.id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || 'supersecret123',
       { expiresIn: '24h' }
     );
 
