@@ -324,6 +324,10 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
  *                   type: string
  *                 roomNo:
  *                   type: string
+ *                 contact:
+ *                   type: string
+ *                 moveInDate:
+ *                   type: string
  *       404:
  *         description: User not found
  *       500:
@@ -331,11 +335,49 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
  */
 router.get('/profile', authenticateJWT, async (req: any, res: Response): Promise<any> => {
   try {
-    const user = await User.findById(req.user.id).select('name email role roomNo');
+    const user = await User.findById(req.user.id).select('name email role roomNo contact moveInDate');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/my-documents:
+ *   get:
+ *     summary: Get logged-in user's documents
+ *     description: Retrieve the identity proof and rental file paths for the currently logged in user based on their JWT token.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's documents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 idProof:
+ *                   type: string
+ *                 idProofFile:
+ *                   type: string
+ *                 rentalFile:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/my-documents', authenticateJWT, async (req: any, res: Response): Promise<any> => {
+  try {
+    const user = await User.findById(req.user.id).select('idProof idProofFile rentalFile');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching documents' });
   }
 });
 
@@ -540,7 +582,8 @@ router.post(
  */
 router.get('/users', authenticateJWT, async (req: Request, res: Response): Promise<any> => {
   try {
-    const users = await User.find().select('-password');
+    // Exclude users with the 'ADMIN' role so they don't appear in the tenant list
+    const users = await User.find({ role: { $ne: 'ADMIN' } }).select('-password');
     res.json(users);
   } catch (error) {
     console.error(error);
